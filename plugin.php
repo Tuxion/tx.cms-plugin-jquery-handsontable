@@ -1,6 +1,5 @@
-<?php namespace plugins; if(!defined('TX')) die('No direct access.'); ?>
+<?php namespace plugins; if(!defined('TX')) die('No direct access.');
 
-<?php
 /*
   <!-- Bare distribution -->
   <script src="<?php echo $plugin ?>lib/jquery.min.js"></script>
@@ -12,7 +11,6 @@
   <link rel="stylesheet" media="screen" href="<?php echo $plugin ?>lib/jQuery-contextMenu/jquery.contextMenu.css">
 */
 ?>
-
-<!-- Full distribution -->
-<script src="<?php echo $plugin ?>dist/jquery.handsontable.full.js"></script>
-<link rel="stylesheet" media="screen" href="<?php echo $plugin ?>dist/jquery.handsontable.full.css">
+    <!-- Full distribution -->
+    <script src="<?php echo $plugin ?>dist/jquery.handsontable.full.js"></script>
+    <link rel="stylesheet" media="screen" href="<?php echo $plugin ?>dist/jquery.handsontable.full.css">
