@@ -61,8 +61,7 @@ function HandsontableAutoColumnSize() {
       tmpNoRenderer = $tmp.children().eq(2);
       tmpRenderer = $tmp.children().eq(3);
 
-      d.body.appendChild(tmp);
-
+      instance.rootElement[0].parentNode.appendChild(tmp);
     }
 
     var rows = instance.countRows();
@@ -88,7 +87,7 @@ function HandsontableAutoColumnSize() {
 
     var settings = instance.getSettings();
     if (settings.colHeaders) {
-      instance.getColHeader(col, tmpTheadTh); //TH innerHTML
+      instance.view.appendColHeader(col, tmpTheadTh); //TH innerHTML
     }
 
     var txt = '';

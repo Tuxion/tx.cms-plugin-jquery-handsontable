@@ -53,50 +53,84 @@ WalkontableBorder.prototype.appear = function (corners) {
     return;
   }
 
-  var offsetRow = this.instance.getSetting('offsetRow')
-    , offsetColumn = this.instance.getSetting('offsetColumn')
-    , displayRows = this.instance.getSetting('displayRows')
-    , lastColumn = this.instance.wtTable.getLastVisibleColumn();
+  var instance = this.instance
+    , fromRow
+    , fromColumn
+    , toRow
+    , toColumn
+    , hideTop = false
+    , hideLeft = false
+    , hideBottom = false
+    , hideRight = false
+    , i
+    , ilen
+    , s;
 
-  var hideTop = false, hideLeft = false, hideBottom = false, hideRight = false;
+  if (!instance.wtTable.isRowInViewport(corners[0])) {
+    hideTop = true;
+  }
 
-  if (displayRows !== null) {
-    if (corners[0] > offsetRow + displayRows - 1 || corners[2] < offsetRow) {
-      hideTop = hideLeft = hideBottom = hideRight = true;
-    }
-    else {
-      if (corners[0] < offsetRow) {
-        corners[0] = offsetRow;
-        hideTop = true;
-      }
-      if (corners[2] > offsetRow + displayRows - 1) {
-        corners[2] = offsetRow + displayRows - 1;
-        hideBottom = true;
-      }
+  if (!instance.wtTable.isRowInViewport(corners[2])) {
+    hideBottom = true;
+  }
+
+  ilen = instance.wtTable.countVisibleRows();
+
+  for (i = 0; i < ilen; i++) {
+    s = instance.wtTable.rowFilter.visibleToSource(i);
+    if (s >= corners[0] && s <= corners[2]) {
+      fromRow = s;
+      break;
     }
   }
 
-  if (corners[1] > lastColumn || corners[3] < offsetColumn) {
-    hideTop = hideLeft = hideBottom = hideRight = true;
+  for (i = ilen - 1; i >= 0; i--) {
+    s = instance.wtTable.rowFilter.visibleToSource(i);
+    if (s >= corners[0] && s <= corners[2]) {
+      toRow = s;
+      break;
+    }
+  }
+
+  if (hideTop && hideBottom) {
+    hideLeft = true;
+    hideRight = true;
   }
   else {
-    if (corners[1] < offsetColumn) {
-      corners[1] = offsetColumn;
+    if (!instance.wtTable.isColumnInViewport(corners[1])) {
       hideLeft = true;
     }
-    if (corners[3] > lastColumn) {
-      corners[3] = lastColumn;
+
+    if (!instance.wtTable.isColumnInViewport(corners[3])) {
       hideRight = true;
+    }
+
+    ilen = instance.wtTable.countVisibleColumns();
+
+    for (i = 0; i < ilen; i++) {
+      s = instance.wtTable.columnFilter.visibleToSource(i);
+      if (s >= corners[1] && s <= corners[3]) {
+        fromColumn = s;
+        break;
+      }
+    }
+
+    for (i = ilen - 1; i >= 0; i--) {
+      s = instance.wtTable.columnFilter.visibleToSource(i);
+      if (s >= corners[1] && s <= corners[3]) {
+        toColumn = s;
+        break;
+      }
     }
   }
 
-  if (hideTop + hideLeft + hideBottom + hideRight < 4) { //at least one border is not hidden
-    isMultiple = (corners[0] !== corners[2] || corners[1] !== corners[3]);
-    $from = $(this.instance.wtTable.getCell([corners[0], corners[1]]));
-    $to = isMultiple ? $(this.instance.wtTable.getCell([corners[2], corners[3]])) : $from;
+  if (fromRow !== void 0 && fromColumn !== void 0) {
+    isMultiple = (fromRow !== toRow || fromColumn !== toColumn);
+    $from = $(instance.wtTable.getCell([fromRow, fromColumn]));
+    $to = isMultiple ? $(instance.wtTable.getCell([toRow, toColumn])) : $from;
     fromOffset = this.wtDom.offset($from[0]);
     toOffset = isMultiple ? this.wtDom.offset($to[0]) : fromOffset;
-    containerOffset = this.wtDom.offset(this.instance.wtTable.TABLE);
+    containerOffset = this.wtDom.offset(instance.wtTable.TABLE);
 
     minTop = fromOffset.top;
     height = toOffset.top + $to.outerHeight() - minTop;
@@ -114,6 +148,10 @@ WalkontableBorder.prototype.appear = function (corners) {
       left += 1;
       width -= 1;
     }
+  }
+  else {
+    this.disappear();
+    return;
   }
 
   if (hideTop) {
@@ -158,7 +196,7 @@ WalkontableBorder.prototype.appear = function (corners) {
     this.rightStyle.display = 'block';
   }
 
-  if (hideBottom && hideRight || !this.hasSetting(this.settings.border.cornerVisible)) {
+  if (hideBottom || hideRight || !this.hasSetting(this.settings.border.cornerVisible)) {
     this.cornerStyle.display = 'none';
   }
   else {

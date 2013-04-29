@@ -25,6 +25,7 @@ module.exports = function (grunt) {
     meta: {
       src: [
         'tmp/core.js',
+        'src/focusCatcher.js',
         'src/tableView.js',
         'src/helpers.js',
         'src/fillHandle.js',
@@ -95,6 +96,16 @@ module.exports = function (grunt) {
             'lib/jQuery-contextMenu/jquery.contextMenu.css'
           ]
         }
+      },
+      wc: {
+        files: {
+          'dist_wc/css/x-handsontable.css': [
+            'dist/jquery.handsontable.full.css'
+          ],
+          'dist_wc/css/jquery-ui/css/smoothness/jquery-ui.custom.css': [
+            'lib/jquery-ui/css/smoothness/jquery-ui.custom.css'
+          ]
+        }
       }
     },
 
@@ -105,7 +116,7 @@ module.exports = function (grunt) {
         'lib/**/*.js',
         'lib/**/*.css'
       ],
-      tasks: ['replace', 'concat', 'clean']
+      tasks: ['default']
     },
 
     clean: {
@@ -125,9 +136,19 @@ module.exports = function (grunt) {
           'tmp/core.js': 'src/core.js',
           'jquery.handsontable.css': 'src/css/jquery.handsontable.css'
         }
+      },
+      wc: {
+        options: {
+          variables: {
+            model: '<%= grunt.file.read("dist/jquery.handsontable.full.js") %>',
+            controller: '<%= grunt.file.read("src/wc/x-handsontable-controller.js") %>'
+          }
+        },
+        files: {
+          'dist_wc/x-handsontable.html': 'src/wc/x-handsontable.html'
+        }
       }
     },
-
     jasmine: {
       handsontable: {
         src: [
@@ -170,7 +191,7 @@ module.exports = function (grunt) {
   });
 
   // Default task.
-  grunt.registerTask('default', ['replace', 'concat', 'clean']);
+  grunt.registerTask('default', ['replace:dist', 'concat', 'replace:wc', 'clean']);
   grunt.registerTask('test', ['default', 'jasmine']);
   grunt.registerTask('test:handsontable', ['default', 'jasmine:handsontable']);
   grunt.registerTask('test:walkontable', ['default', 'jasmine:walkontable']);

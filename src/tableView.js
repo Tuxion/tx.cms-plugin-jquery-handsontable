@@ -53,7 +53,8 @@ Handsontable.TableView = function (instance) {
 
     if (next !== that.wt.wtTable.spreader) { //immediate click on "spreader" means click on the right side of vertical scrollbar
       while (next !== null && next !== document.documentElement) {
-        if (next === instance.rootElement[0] || next.id === 'context-menu-layer' || $(next).is('.context-menu-list') || $(next).is('.typeahead li')) {
+        //X-HANDSONTABLE is the tag name in Web Components version of HOT. Removal of this breaks cell selection
+        if (next === instance.rootElement[0] || next.nodeName === 'X-HANDSONTABLE' || next.id === 'context-menu-layer' || $(next).is('.context-menu-list') || $(next).is('.typeahead li')) {
           return; //click inside container
         }
         next = next.parentNode;
@@ -141,8 +142,7 @@ Handsontable.TableView = function (instance) {
 
   var walkontableConfig = {
     table: table,
-    async: that.settings.asyncRendering,
-    stretchH: that.settings.stretchH,
+    stretchH: this.settings.stretchH,
     data: instance.getDataAtCell,
     totalRows: instance.countRows,
     totalColumns: instance.countCols,
@@ -150,8 +150,14 @@ Handsontable.TableView = function (instance) {
     offsetColumn: 0,
     width: this.getWidth(),
     height: this.getHeight(),
-    rowHeaders: that.settings.rowHeaders ? [instance.getRowHeader] : null,
-    columnHeaders: that.settings.colHeaders ? instance.getColHeader : null,
+    fixedColumnsLeft: this.settings.fixedColumnsLeft,
+    fixedRowsTop: this.settings.fixedRowsTop,
+    rowHeaders: this.settings.rowHeaders ? function (index, TH) {
+      that.appendRowHeader(index, TH);
+    } : null,
+    columnHeaders: this.settings.colHeaders ? function (index, TH) {
+      that.appendColHeader(index, TH);
+    } : null,
     columnWidth: instance.getColWidth,
     cellRenderer: function (row, column, TD) {
       that.applyCellTypeMethod('renderer', TD, row, column);
@@ -159,8 +165,6 @@ Handsontable.TableView = function (instance) {
     selections: {
       current: {
         className: 'current',
-        highlightRowClassName: that.settings.currentRowClassName,
-        highlightColumnClassName: that.settings.currentColClassName,
         border: {
           width: 2,
           color: '#5292F7',
@@ -172,8 +176,6 @@ Handsontable.TableView = function (instance) {
       },
       area: {
         className: 'area',
-        highlightRowClassName: that.settings.currentRowClassName,
-        highlightColumnClassName: that.settings.currentColClassName,
         border: {
           width: 1,
           color: '#89AFF9',
@@ -182,6 +184,10 @@ Handsontable.TableView = function (instance) {
             return that.settings.fillHandle && !that.isCellEdited() && instance.selection.isMultiple()
           }
         }
+      },
+      highlight: {
+        highlightRowClassName: that.settings.currentRowClassName,
+        highlightColumnClassName: that.settings.currentColClassName
       },
       fill: {
         className: 'fill',
@@ -204,13 +210,15 @@ Handsontable.TableView = function (instance) {
       else {
         instance.selection.setRangeStart(coordsObj);
       }
-      TD.focus();
       event.preventDefault();
       clearTextSelection();
 
       if (that.settings.afterOnCellMouseDown) {
         that.settings.afterOnCellMouseDown.call(instance, event, coords, TD);
       }
+      setTimeout(function () {
+        instance.listen(); //fix IE7-8 bug that sets focus to TD after mousedown
+      });
     },
     onCellMouseOver: function (event, coords, TD) {
       var coordsObj = {row: coords[0], col: coords[1]};
@@ -234,8 +242,6 @@ Handsontable.TableView = function (instance) {
   Handsontable.PluginHooks.run(instance, 'walkontableConfig', walkontableConfig);
 
   this.wt = new Walkontable(walkontableConfig);
-  // instance.forceFullRender = true; //used when data was changed
-  // this.render();
 
   $window.on('resize.' + instance.guid, function () {
     instance.registerTimeout('resizeTimeout', function () {
@@ -256,8 +262,6 @@ Handsontable.TableView = function (instance) {
       event.stopPropagation();
     }
   });
-
-  // table.focus(); //otherwise TextEditor tests do not pass in IE8
 };
 
 Handsontable.TableView.prototype.isCellEdited = function () {
@@ -315,4 +319,35 @@ Handsontable.TableView.prototype.getCellAtCoords = function (coords) {
  */
 Handsontable.TableView.prototype.scrollViewport = function (coords) {
   this.wt.scrollViewport([coords.row, coords.col]);
+};
+
+/**
+ * Append row header to a TH element
+ * @param row
+ * @param TH
+ */
+Handsontable.TableView.prototype.appendRowHeader = function (row, TH) {
+  this.wt.wtDom.avoidInnerHTML(TH, this.instance.getRowHeader(row));
+};
+
+/**
+ * Append column header to a TH element
+ * @param col
+ * @param TH
+ */
+Handsontable.TableView.prototype.appendColHeader = function (col, TH) {
+  var DIV = document.createElement('DIV')
+    , SPAN = document.createElement('SPAN');
+
+  DIV.className = 'relative';
+  SPAN.className = 'colHeader';
+
+  this.wt.wtDom.avoidInnerHTML(SPAN, this.instance.getColHeader(col));
+  DIV.appendChild(SPAN);
+
+  while (TH.firstChild) {
+    TH.removeChild(TH.firstChild); //empty TH node
+  }
+  TH.appendChild(DIV);
+  Handsontable.PluginHooks.run(this.instance, 'afterGetColHeader', col, TH);
 };

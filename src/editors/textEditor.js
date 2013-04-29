@@ -6,6 +6,8 @@ function HandsontableTextEditorClass(instance) {
 }
 
 HandsontableTextEditorClass.prototype.createElements = function () {
+  this.wtDom = new WalkontableDom();
+
   this.TEXTAREA = document.createElement('TEXTAREA');
   this.TEXTAREA.className = 'handsontableInput';
   this.textareaStyle = this.TEXTAREA.style;
@@ -110,7 +112,7 @@ HandsontableTextEditorClass.prototype.bindTemporaryEvents = function (td, row, c
 
   var that = this;
 
-  this.instance.$table.on('keydown.editor', function (event) {
+  this.instance.focusCatcher.$el.on('keydown.editor', function (event) {
     var ctrlDown = (event.ctrlKey || event.metaKey) && !event.altKey; //catch CTRL but not right ALT (which in some systems triggers ALT+CTRL)
     if (!that.isCellEdited) {
       if (Handsontable.helper.isPrintableChar(event.keyCode)) {
@@ -146,7 +148,7 @@ HandsontableTextEditorClass.prototype.bindTemporaryEvents = function (td, row, c
 };
 
 HandsontableTextEditorClass.prototype.unbindTemporaryEvents = function () {
-  this.instance.$table.off(".editor");
+  this.instance.focusCatcher.$el.off(".editor");
   this.instance.view.wt.update('onCellDblClick', null);
 };
 
@@ -224,13 +226,6 @@ HandsontableTextEditorClass.prototype.beginEditing = function (row, col, prop, u
   this.refreshDimensions(); //need it instantly, to prevent https://github.com/warpech/jquery-handsontable/issues/348
   this.TEXTAREA.focus();
   this.setCaretPosition(this.TEXTAREA, this.TEXTAREA.value.length);
-
-  if (this.instance.getSettings().asyncRendering) {
-    var that = this;
-    setTimeout(function () {
-      that.refreshDimensions(); //need it after rerender to reposition in case scroll was moved
-    }, 0);
-  }
 };
 
 HandsontableTextEditorClass.prototype.refreshDimensions = function () {
@@ -241,8 +236,8 @@ HandsontableTextEditorClass.prototype.refreshDimensions = function () {
   ///start prepare textarea position
   this.TD = this.instance.getCell(this.row, this.col);
   var $td = $(this.TD); //because old td may have been scrolled out with scrollViewport
-  var currentOffset = $td.offset();
-  var containerOffset = this.instance.rootElement.offset();
+  var currentOffset = this.wtDom.offset(this.TD);
+  var containerOffset = this.wtDom.offset(this.instance.rootElement[0]);
   var scrollTop = this.instance.rootElement.scrollTop();
   var scrollLeft = this.instance.rootElement.scrollLeft();
   var editTop = currentOffset.top - containerOffset.top + scrollTop - 1;
@@ -307,17 +302,17 @@ HandsontableTextEditorClass.prototype.finishEditing = function (isCancelled, ctr
       ];
       if (ctrlDown) { //if ctrl+enter and multiple cells selected, behave like Excel (finish editing and apply to all cells)
         var sel = this.instance.getSelected();
-        this.instance.populateFromArray({row: sel[0], col: sel[1]}, val, {row: sel[2], col: sel[3]}, false, 'edit');
+        this.instance.populateFromArray({row: sel[0], col: sel[1]}, val, {row: sel[2], col: sel[3]}, 'edit');
       }
       else {
-        this.instance.populateFromArray({row: this.row, col: this.col}, val, null, false, 'edit');
+        this.instance.populateFromArray({row: this.row, col: this.col}, val, null, 'edit');
       }
     }
   }
 
   this.unbindTemporaryEvents();
   if (document.activeElement === this.TEXTAREA) {
-    this.TD.focus(); //don't refocus the table if user focused some cell outside of HT on purpose
+    this.instance.listen(); //don't refocus the table if user focused some cell outside of HT on purpose
   }
 
   this.textareaParentStyle.display = 'none';
